@@ -1,10 +1,9 @@
-from AgentBase import AgentBase
-from Agents.utils import build_mlp
+from Agents.ReplayBuffer import ReplayBuffer
+from Agents.utils import build_mlp, soft_update, optimizer_update
 from copy import deepcopy
 from typing import Tuple
 import torch
 from torch import nn, Tensor
-from utils import soft_update, optimizer_update
 
 dqn_args = {
     "explore_rate": 0.25,
@@ -12,7 +11,6 @@ dqn_args = {
     "gamma": 0.99,
     "repeat_times": 1,
     "batch_size": 64,
-    "if_use_per": False,
     "soft_update_tau": 5e-3,  # 2 ** -8 ~= 5e-3. the tau of soft target update `net = (1-tau)*net + tau*net1`
     "clip_grad_norm": 3.0,  # 0.1 ~ 4.0, clip the gradient after normalization
     "learning_rate": 6e-5,  # the learning rate for network updating
@@ -47,12 +45,8 @@ class AgentDQN:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        if args["if_use_per"]:
-            self.criterion = torch.nn.SmoothL1Loss(reduction="none")
-            self.get_obj_critic = self.get_obj_critic_per
-        else:
-            self.criterion = torch.nn.SmoothL1Loss(reduction="mean")
-            self.get_obj_critic = self.get_obj_critic_raw
+        self.criterion = torch.nn.SmoothL1Loss(reduction="mean")
+        self.get_obj_critic = self.get_obj_critic_raw
 
     def explore_env(self, env, horizon_len: int) -> Tuple[Tensor, ...]:
         """
@@ -63,18 +57,19 @@ class AgentDQN:
         rewards = torch.zeros((horizon_len, 1), dtype=torch.float32).to(self.device)
         dones = torch.zeros((horizon_len, 1), dtype=torch.bool).to(self.device)
 
-        state = env.reset()
-        states[0] = state
+        state, _ = env.reset()
+        state = states[0] = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
         get_action = self.act.get_action
 
         for t in range(horizon_len):
             with torch.no_grad():
                 action = get_action(state)  # different
 
-            ary_action = action.detach().cpu().numpy()
-            ary_state, reward, done, _ = env.step(ary_action)  # next_state
+            ary_action = action.detach().cpu().numpy().item()
+            ary_state, reward, terminated, truncated, _ = env.step(ary_action)  # next_state
+            done = terminated or truncated
             state = torch.as_tensor(ary_state, dtype=torch.float32, device=self.device).unsqueeze(0)
-            states[t+1] = state
+            states[t + 1] = state
             actions[t] = action
             rewards[t] = reward
             dones[t] = done
@@ -111,49 +106,24 @@ class AgentDQN:
         """
         with torch.no_grad():
             states, actions, rewards, undones, next_ss = buffer.sample(batch_size)  # next_ss: next states
-            next_qs = self.cri_target(next_ss).max(dim=1, keepdim=True)[0].squeeze(1)  # next q_values
+            next_qs = self.cri_target(next_ss).max(dim=1, keepdim=True)[0]  # next q_values
             q_labels = rewards + undones * self.gamma * next_qs
 
-        q_values = self.cri(states).gather(1, actions.long()).squeeze(1)
+        q_values = self.cri(states).gather(1, actions.long())
         obj_critic = self.criterion(q_values, q_labels)
         return obj_critic, q_values
 
-    def get_obj_critic_per(self, buffer: ReplayBuffer, batch_size: int) -> Tuple[Tensor, Tensor]:
-        """
-        Calculate the loss of the network and predict Q values with **Prioritized Experience Replay (PER)**.
+    def get_parameters(self):
+        return self.act
 
-        :param buffer: the ReplayBuffer instance that stores the trajectories.
-        :param batch_size: the size of batch data for Stochastic Gradient Descent (SGD).
-        :return: the loss of the network and Q values.
-        """
-        with torch.no_grad():
-            states, actions, rewards, undones, next_ss, is_weights, is_indices = buffer.sample_for_per(batch_size)
-            # is_weights, is_indices: important sampling `weights, indices` by Prioritized Experience Replay (PER)
-            next_qs = self.cri_target(next_ss).max(dim=1, keepdim=True)[0].squeeze(1)  # q values in next step
-            q_labels = rewards + undones * self.gamma * next_qs
-
-        q_values = self.cri(states).gather(1, actions.long()).squeeze(1)
-        td_errors = self.criterion(q_values, q_labels)  # or td_error = (q_value - q_label).abs()
-        obj_critic = (td_errors * is_weights).mean()
-
-        buffer.td_error_update_for_per(is_indices.detach(), td_errors.detach())
-        return obj_critic, q_values
-
-    def get_cumulative_rewards(self, rewards: Tensor, undones: Tensor, last_state: Tensor) -> Tensor:
-        returns = torch.empty_like(rewards)
-
-        masks = undones * self.gamma
-        horizon_len = rewards.shape[0]
-
-        next_value = self.act_target(last_state).argmax(dim=1).detach()  # actor is Q Network in DQN style
-        for t in range(horizon_len - 1, -1, -1):
-            returns[t] = next_value = rewards[t] + masks[t] * next_value
-        return returns
+    def update_parameters(self, parameters):
+        self.act = parameters
+        self.act.cpu()
 
 
 class QNet(nn.Module):
     def __init__(self, dims: [int], state_dim: int, action_dim: int, explore_rate=0.125):
-        super().__init__(state_dim=state_dim, action_dim=action_dim)
+        super().__init__()
         self.explore_rate = explore_rate
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -164,7 +134,6 @@ class QNet(nn.Module):
         return value  # Q values for multiple actions
 
     def get_action(self, state):
-        state = self.state_norm(state)
         if self.explore_rate < torch.rand(1):
             action = self.net(state).argmax(dim=1, keepdim=True)
         else:

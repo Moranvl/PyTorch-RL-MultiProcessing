@@ -16,6 +16,8 @@ explore_env
 update_params
 get_params
 update_net
+
+buffer:
 add_buffer_item
 """
 
