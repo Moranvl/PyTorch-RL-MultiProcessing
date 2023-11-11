@@ -22,7 +22,7 @@ if __name__ == '__main__':
     )
 
     sum_rewards = 0
-    for i in range(100):
+    for i in range(200):
         buffer_item = agent.explore_env(env, 200)
         sum_rewards = buffer_item[2].sum()
         buffer.update(buffer_item)

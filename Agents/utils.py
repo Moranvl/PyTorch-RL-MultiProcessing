@@ -42,3 +42,8 @@ def optimizer_update(optimizer: torch.optim, objective: Tensor, clip_grad_norm):
     objective.backward()
     clip_grad_norm_(parameters=optimizer.param_groups[0]["params"], max_norm=clip_grad_norm)
     optimizer.step()
+
+
+def copy_net_params(current_net, target_net):
+    for tar, cur in zip(target_net.parameters(), current_net.parameters()):
+        tar.data.copy_(cur.data)

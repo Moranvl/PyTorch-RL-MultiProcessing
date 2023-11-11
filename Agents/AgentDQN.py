@@ -1,5 +1,5 @@
 from Agents.ReplayBuffer import ReplayBuffer
-from Agents.utils import build_mlp, soft_update, optimizer_update
+from Agents.utils import build_mlp, soft_update, optimizer_update, copy_net_params
 from copy import deepcopy
 from typing import Tuple
 import torch
@@ -113,12 +113,15 @@ class AgentDQN:
         obj_critic = self.criterion(q_values, q_labels)
         return obj_critic, q_values
 
-    def get_parameters(self):
-        return self.act
+    def get_params(self):
+        params = deepcopy(self.act)
+        params.cpu()
+        return params
 
-    def update_parameters(self, parameters):
+    def update_params(self, parameters):
         self.act = parameters
         self.act.cpu()
+        # print(self.act(torch.zeros(self.state_dim)))
 
 
 class QNet(nn.Module):
