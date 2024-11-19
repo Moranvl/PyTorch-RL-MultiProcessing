@@ -4,9 +4,6 @@ from typing import Tuple, Union
 from torch import Tensor
 from torch.nn.utils import clip_grad_norm_
 
-from elegantrl.train import Config, ReplayBuffer
-
-
 class AgentBase:
     """
     The basic agent of ElegantRL
