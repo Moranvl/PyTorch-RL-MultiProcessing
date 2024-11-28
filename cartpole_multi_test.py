@@ -1,5 +1,5 @@
 from MpUsingTorch.DataParallel import Learner
-from Agents.AgentDQN import dqn_args, AgentDQN
+from Agents.OldAgentDQN import dqn_args, AgentDQN
 
 import matplotlib.pyplot as plt
 import gym

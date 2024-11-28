@@ -8,8 +8,10 @@ class ReplayBuffer:  # for off-policy
                  max_size: int,
                  state_dim: int,
                  action_dim: int,
+                 batch_size: int,
                  gpu_id: int = 0,
                  ):
+        self.batch_size = batch_size
         self.p = 0  # pointer
         self.if_full = False
         self.cur_size = 0
@@ -89,3 +91,6 @@ class ReplayBuffer:  # for off-policy
                 self.rewards[ids],
                 self.undones[ids],
                 self.next_states[ids],)  # next_state
+
+    def is_need_train(self):
+        return self.cur_size > self.batch_size

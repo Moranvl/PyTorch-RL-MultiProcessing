@@ -1,4 +1,4 @@
-from Agents.AgentDQN import AgentDQN, dqn_args
+from Agents.OldAgentDQN import AgentDQN, dqn_args
 from Agents.ReplayBuffer import ReplayBuffer
 import gym
 
@@ -19,6 +19,7 @@ if __name__ == '__main__':
         # 离散
         action_dim=1,
         gpu_id=0,
+        batch_size=args["batch_size"],
     )
 
     sum_rewards = 0

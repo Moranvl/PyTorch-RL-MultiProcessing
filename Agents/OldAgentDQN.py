@@ -2,8 +2,7 @@ import torch
 from torch import nn, Tensor
 from copy import deepcopy
 from typing import Tuple
-from multiprocessing import Value
-from .AgentBase import AgentBase
+from .AgentDQN import QNet
 from .ReplayBuffer import ReplayBuffer
 from .utils import build_mlp, soft_update, optimizer_update, copy_net_params
 
@@ -126,22 +125,3 @@ class AgentDQN:
         self.act.cpu()
         # print(self.act(torch.zeros(self.state_dim)))
 
-
-class QNet(nn.Module):
-    def __init__(self, dims: [int], state_dim: int, action_dim: int, explore_rate=0.125):
-        super().__init__()
-        self.explore_rate = explore_rate
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        self.net = build_mlp(dims=[state_dim, *dims, action_dim])
-
-    def forward(self, state):
-        value = self.net(state)
-        return value  # Q values for multiple actions
-
-    def get_action(self, state):
-        if self.explore_rate < torch.rand(1):
-            action = self.net(state).argmax(dim=1, keepdim=True)
-        else:
-            action = torch.randint(self.action_dim, size=(state.shape[0], 1))
-        return action
