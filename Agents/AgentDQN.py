@@ -37,13 +37,7 @@ class AgentDQN(AgentBase):
         super().__init__(env, share_model_id, role, agent_args)
         # Args
         self.exploit_step = 0
-        self.device = None
-        if role == 'learner' and torch.cuda.is_available():
-            self.device = torch.device('cuda')
-        elif role == 'worker' or role =='learner':
-            self.device = torch.device('cpu')
-        else:
-            raise ValueError(f"role is error! role: {role}")
+
         self.state_dim = agent_args["state_dim"]
         self.action_dim = agent_args["action_dim"]
         self.horizon_len = agent_args["horizon_len"]

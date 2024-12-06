@@ -94,3 +94,41 @@ class ReplayBuffer:  # for off-policy
 
     def is_need_train(self):
         return self.cur_size > self.batch_size
+
+class OnlineReplayBuffer:
+    """
+    replay buffer for online replay. (no replay)
+    """
+    def __init__(self, device):
+        self.device = device
+        self.states, self.actions, self.logprobs, self.rewards, self.undones = [[] for _ in range(5)]
+
+    def update_buffer(self, data):
+        states, actions, logprobs, rewards, undones = data
+
+        self.states.append(states)
+        self.actions.append(actions)
+        self.logprobs.append(logprobs)
+        self.rewards.append(rewards)
+        self.undones.append(undones)
+
+    def sample(self):
+        actions     = torch.vstack(self.actions).to(self.device)
+        logprobs    = torch.vstack(self.logprobs).to(self.device)
+        rewards     = torch.vstack(self.rewards).to(self.device)
+        undones     = torch.vstack(self.undones).to(self.device)
+
+        states, next_states = [], []
+        for s in self.states:
+            states.append(s[:-1])
+            next_states.append(s[1:])
+        states      = torch.vstack(states).to(self.device)
+        next_states = torch.vstack(next_states).to(self.device)
+        self.clear()
+
+        return states,next_states, actions, logprobs, rewards, undones
+
+    def clear(self):
+        [l.clear() for l in (self.states, self.actions, self.logprobs, self.rewards, self.undones)]
+
+

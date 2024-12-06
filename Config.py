@@ -2,13 +2,16 @@ from Agents.AgentBase import AgentBase
 
 
 class Config:
+    # useful for online and offline
+    """the num of workers and learners, 0 means all computing resources"""
+    WORKER_NUM: int = 8
+
+    # offline
     # global
     AgentClass = AgentBase
     CLEAR_HISTORY = True
 
     # Scheduler
-    """the num of workers and learners, 0 means all computing resources"""
-    WORKER_NUM: int = 8
     MODEL_POOL_SIZE: int = 20
 
     # Worker

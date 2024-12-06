@@ -63,7 +63,7 @@ class Learner(Process):
                 if self.is_need_train():
                     self.learn()
                     if time.time() - now > self.save_model_time:
-                        self.save_model()
+                        self.save_model_for_train()
                         now = time.time()
                     self.agent.exploit(self.writer)
                 time.sleep(self.sleep_time)
@@ -86,9 +86,9 @@ class Learner(Process):
     def is_need_train(self):
         return self.agent.replay_buffer.is_need_train()
 
-    def save_model(self):
+    def save_model_for_train(self):
         model_id = self.model_pool.save_model()
-        self.agent.save_model(model_id, self.models_path)
+        self.agent.save_model(model_id, self.models_path, is_for_train=True)
         # update the share memory
         with self.share_model_id.get_lock():
             self.share_model_id.value = model_id

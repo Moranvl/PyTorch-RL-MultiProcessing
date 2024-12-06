@@ -20,6 +20,10 @@ def build_mlp(dims: [int], activation: nn = None, if_raw_out: bool = True) -> nn
         del net_list[-1]  # delete the activation function of the output layer to keep raw output
     return nn.Sequential(*net_list)
 
+def layer_init_with_orthogonal(layer, std=1.0, bias_const=1e-6):
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+
 
 def soft_update(target_net: torch.nn.Module, current_net: torch.nn.Module, tau: float):
     """soft update target network via current network
