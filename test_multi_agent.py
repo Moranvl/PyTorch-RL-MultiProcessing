@@ -27,12 +27,12 @@ def clear_history():
             print("Clear Error")
 
 def test_DQN():
-    from Agents.AgentDQN import AgentDQN, args
+    from Agents.AgentDQN import AgentDQN, AgentDoubleDQN, AgentD3QN, args
     es = create_env("CartPole-v1")
     env = es[0]
     args["state_dim"], args["action_dim"] = env.observation_space.shape[0], env.action_space.n
 
-    scheduler = Scheduler(agent_class=AgentDQN, agent_args=args, envs=es)
+    scheduler = Scheduler(agent_class=AgentD3QN, agent_args=args, envs=es)
     scheduler.start_work()
     # time.sleep(5)
     # scheduler.close()
@@ -93,8 +93,8 @@ def test_Discrete_PPO():
 if __name__ == "__main__":
     if Config.CLEAR_HISTORY:
         clear_history()
-    # test_DQN()
+    test_DQN()
     # test_SAC()
     # test_PPO()
-    test_Discrete_PPO()
+    # test_Discrete_PPO()
 

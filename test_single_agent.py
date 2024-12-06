@@ -15,6 +15,7 @@ def test_agent(environment, agent_args, writer, agent_class):
         print(f"{ep}:\t{rs[-1]}")
         agent.update_buffer(data)
         agent.learn(writer)
+        agent.exploit_step += 1
     print(agent.exploit(writer))
     plt.plot(rs)
     plt.show()
@@ -57,11 +58,17 @@ def test_agent_commucation(environment, agent_args, writer, agent_class):
 
 def test_DQN():
     from Agents.AgentDQN import args as agent_args
-    agent = AgentDQN
+    from Agents.AgentDQN import AgentDoubleDQN, AgentD3QN
+    # agent = AgentDQN
+    # agent = AgentDoubleDQN
+    agent = AgentD3QN
     # for discrete
     env = gym.make("CartPole-v1")
 
     agent_args["state_dim"], agent_args["action_dim"] = env.observation_space.shape[0], env.action_space.n
+    # agent_args["soft_update_tau"] = 0.05
+    # agent_args["batch_size"] = 256
+    # agent_args["learning_rate"] = 1e-5
 
     tensorboard_writer = SummaryWriter(str(Path.cwd() / "logs" / "test"))
     test_agent(env, agent_args, tensorboard_writer, agent)
@@ -116,10 +123,10 @@ def test_Discrete_PPO():
 
 
 if __name__ == '__main__':
-    # test_DQN()
+    test_DQN()
     # test_SAC()
     # test_PPO()
-    test_Discrete_PPO()
+    # test_Discrete_PPO()
 
 
 
